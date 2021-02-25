@@ -17,10 +17,10 @@ ne = na; % # innovation delays
 nd = 3; % # degree polynomial nonlinearity
 
 N = 2^16;
-P = 2;
+P = 1;
 
 stdu = 1;
-stde = .03;
+stde = .001;
 
 %% Define system
 dataTemp.u = randn(100,1);
@@ -50,6 +50,8 @@ sysTheta(end-nd+2:end)=100*(rand(nd-1,1)-0.5); % nl terms noise
 ToySystem.nb = nb;
 ToySystem.na = na;
 ToySystem.ne = na;
+ToySystem.nd = nd;
+ToySystem.stde = stde;
 ToySystem.comb = sysComb;
 ToySystem.theta = sysTheta;
 
@@ -105,6 +107,9 @@ ySimIterTest = fSimPolNarmax(dataTest,modelNarmaxIter);
 
 [yPredIterTest0,ePredIterTest0] = fPredPolNarmax(dataTest,ToySystem);
 ySimIterTest0 = fSimPolNarmax(dataTest,ToySystem);
+
+% Compute RMS 
+RMS_KLS = rms(yTest-ySimIterTest);
 
 %% plot
 

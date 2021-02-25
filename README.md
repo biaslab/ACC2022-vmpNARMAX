@@ -1,4 +1,4 @@
-# CDC2021 FEM-NARMAX
+# CDC2021 VMP-NARMAX
 
 Experiments and derivations for a submission to the [2021 Conference on Decision and Control](https://2021.ieeecdc.org/) entitled
 
