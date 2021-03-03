@@ -5,7 +5,7 @@ using ForneyLab
 using NARX
 
 import ForneyLab: unsafeMean, unsafeCov
-include("gen_data.jl")
+include("gen_signal.jl")
 
 vis = false
 if vis; include("visualization.jl"); end

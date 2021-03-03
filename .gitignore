@@ -23,6 +23,9 @@ docs/site/
 # environment.
 Manifest.toml
 
+# Ignore matlab autosaves
+*.m~
+
 # Ignore notebook checkpoints
 .vscode/
 .ipynb_checkpoints

@@ -10,7 +10,7 @@ function fMultiSinGen(N::Integer,
                       fs::Float64=1.0,
                       type_signal::String="full",
                       nGroup::Integer=3,
-                      uStd::Float64=1)
+                      uStd::Float64=1.)
     """
     generates a zero-mean random phase multisine with std = 1
     INPUT
@@ -81,7 +81,7 @@ function fMultiSinGen(N::Integer,
         nRemove = floor(nLines / nGroup)
         removeInd = rand(1:nGroup, [1 nRemove])
         removeInd = removeInd + nGroup*[0:nRemove-1]
-        lines(removeInd) = []
+        lines = lines(!removeInd)
     end
     nLines = length(lines)
 
