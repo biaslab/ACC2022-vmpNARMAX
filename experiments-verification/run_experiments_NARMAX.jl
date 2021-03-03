@@ -55,11 +55,9 @@ for d=1:deg_m; global PΦ = hcat(d .*Matrix{Float64}(I,M_m,M_m), PΦ); end
 ϕ(x::Array{Float64,1}) = [prod(x.^PΦ[:,k]) for k = 1:size(PΦ,2)]
 
 # Signal lengths
-start_index = 10
-split_index = 200 + start_index
-time_horizon = 1000 + split_index
-ix_trn = 1:1000
-ix_tst = 1:1000
+transient = 1000
+ix_trn = 1:1000 .+ transient
+ix_tst = 1:1000 .+ transient
 
 # Repetitions
 num_repeats = 10

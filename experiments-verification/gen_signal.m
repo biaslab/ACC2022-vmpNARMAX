@@ -30,7 +30,7 @@ sysTheta(3:nd:nd*(nb+1+na)) = 0.01*(rand(nb+1+na,1)-0.5); % odd terms
 sysTheta(1:nd:(nb+1)*nd)=b;
 sysTheta((nb+1)*nd+1:nd:(nb+1)*nd+na*nd)=-a(2:end);
 sysTheta((nb+1+na)*nd+1:nd:(nb+1+na)*nd+ne*nd)=0.1;
-sysTheta(end-nd+2:end)=10*(rand(nd-1,1)-0.5); % nl terms noise
+sysTheta(end-nd+2:end)=100*(rand(nd-1,1)-0.5); % nl terms noise
 
 ToySystem.nb = nb;
 ToySystem.na = na;
