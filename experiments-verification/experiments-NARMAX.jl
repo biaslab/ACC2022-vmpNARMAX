@@ -62,8 +62,8 @@ function experiment_FEM(input_trn, output_trn, input_tst, output_tst, ϕ; M1=1, 
     "Inference execution"
 
     # Initialize priors
-    θ_k = (zeros(N,), 10 .*Matrix{Float64}(I,N,N))
-    τ_k = (1e4, 1e0)
+    θ_k = (zeros(N,), 1 .*Matrix{Float64}(I,N,N))
+    τ_k = (4e5, 1e1)
 
     # Initialize marginals
     marginals = Dict(:θ => ProbabilityDistribution(Multivariate, GaussianMeanVariance, m=θ_k[1], v=θ_k[2]),
@@ -137,7 +137,7 @@ function experiment_FEM(input_trn, output_trn, input_tst, output_tst, ϕ; M1=1, 
     predictions = (zeros(T_tst,), zeros(T_tst,))
     errors = zeros(T_tst,)
 
-    for (jj,k) in enumerate(maxM+1:T_tst)
+    for k in maxM+1:T_tst
         
         # Update history vectors
         y_kmin1 = output_tst[k-1:-1:k-M1]
@@ -159,7 +159,7 @@ function experiment_FEM(input_trn, output_trn, input_tst, output_tst, ϕ; M1=1, 
     # Prepare array
     simulations = (zeros(T_tst,), zeros(T_tst,))
 
-    for (jj,k) in enumerate(maxM+1:T_tst)
+    for k in maxM+1:T_tst
         
         # Update history vectors
         y_kmin1 = simulations[1][k-1:-1:k-M1]
@@ -176,8 +176,8 @@ function experiment_FEM(input_trn, output_trn, input_tst, output_tst, ϕ; M1=1, 
     "Evaluation"
 
     # Compute root mean square error
-    RMS_prd = sqrt(mean((predictions[1] - output_tst).^2))
-    RMS_sim = sqrt(mean((simulations[1] - output_tst).^2))
+    RMS_prd = sqrt(mean((predictions[1][maxM+1:end] - output_tst[maxM+1:end]).^2))
+    RMS_sim = sqrt(mean((simulations[1][maxM+1:end] - output_tst[maxM+1:end]).^2))
 
     return RMS_sim, RMS_prd, Fq
 end
@@ -228,7 +228,7 @@ function experiment_RLS(input_trn, output_trn, input_tst, output_tst, ϕ; M1=1, 
     predictions = zeros(T_tst,)
     errors = zeros(T_tst,)
 
-    for (jj,k) in enumerate(maxM+1:T_tst)
+    for k in maxM+1:T_tst
         
         # Update history vectors
         y_kmin1 = output_tst[k-1:-1:k-M1]
@@ -249,7 +249,7 @@ function experiment_RLS(input_trn, output_trn, input_tst, output_tst, ϕ; M1=1, 
     # Prepare array
     simulations = zeros(T_tst,)
 
-    for (jj,k) in enumerate(maxM+1:T_tst)
+    for k in maxM+1:T_tst
         
         # Update history vectors
         y_kmin1 = simulations[k-1:-1:k-M1]
@@ -265,8 +265,8 @@ function experiment_RLS(input_trn, output_trn, input_tst, output_tst, ϕ; M1=1, 
     "Evaluation"
 
     # Compute root mean square error
-    RMS_prd = sqrt(mean((predictions[maxM:end] - output_tst[maxM:end]).^2))
-    RMS_sim = sqrt(mean((simulations[maxM:end] - output_tst[maxM:end]).^2))
+    RMS_prd = sqrt(mean((predictions[maxM+1:end] - output_tst[maxM+1:end]).^2))
+    RMS_sim = sqrt(mean((simulations[maxM+1:end] - output_tst[maxM+1:end]).^2))
 
     return RMS_sim, RMS_prd
 end
