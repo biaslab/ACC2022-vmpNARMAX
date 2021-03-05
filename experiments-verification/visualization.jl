@@ -37,6 +37,29 @@ function plot_errors(output, predictions, ix_val)
     scatter(pred_errors, label="RMS = "*string(RMS), ylabel="squared error", yscale=:log10, size=(800,300))
 end
 
+function tmean(x::AbstractArray, dims::Int64; tr::Real=0.2)
+    """`tmean(x; tr=0.2)`
+    Trimmed mean of real-valued array `x`.
+    Find the mean of `x`, omitting the lowest and highest `tr` fraction of the data.
+    This requires `0 <= tr <= 0.5`. The amount of trimming defaults to `tr=0.2`.
+    """
+
+    nrows,ncols = size(x)
+
+    if dims==1
+        tmeans = zeros(1,ncols)
+        for n = 1:nrows
+            tmeans[1,n] = tmean!(copy(x[:,n]), tr=tr)
+        end
+    elseif dims==2
+        tmeans = zeros(nrows,1)
+        for n = 1:ncols
+            tmeans[n,1] = tmean!(copy(x[n,:]), tr=tr)
+        end
+    end
+    return tmeans
+end
+
 function tmean(x::AbstractArray; tr::Real=0.2)
     """`tmean(x; tr=0.2)`
     Trimmed mean of real-valued array `x`.

@@ -1,3 +1,4 @@
+using Revise
 using JLD
 using MAT
 using ProgressMeter
@@ -11,9 +12,10 @@ include("gen_signal.jl")
 include("experiments-NARMAX.jl")
 
 
+"""System parameters"""
+
 # Polynomial degrees
 deg_t = 3
-deg_m = 3
 
 # Orders
 M1_t = 3
@@ -21,12 +23,6 @@ M2_t = 3
 M3_t = 3
 M_t = M1_t + 1 + M2_t + M3_t
 N_t = M_t*deg_t
-
-M1_m = 3
-M2_m = 3
-M3_m = 3
-M_m = M1_m + 1 + M2_m + M3_m
-N_m = M_m*deg_m
 
 # Input signal params
 num_periods = 10
@@ -37,40 +33,65 @@ fs = 1000
 uStd = 1.
 
 # Output signal params
-λ = 1.00
 τ_true = 1e4
 θ_scale = 0.5
-
-# Number of VMP iterations
-num_iters = 5
 
 # Basis function true signal
 PΨ = zeros(M_t,0)
 for d=1:deg_t; global PΨ = hcat(d .*Matrix{Float64}(I,M_t,M_t), PΨ); end
 ψ(x::Array{Float64,1}) = [prod(x.^PΨ[:,k]) for k = 1:size(PΨ,2)]
 
+"""Model parameters"""
+
+# Polynomial degrees
+deg_m = 3
+
+# Orders
+M1_m = 3
+M2_m = 3
+M3_m = 3
+M_m = M1_m + 1 + M2_m + M3_m
+N_m = M_m*deg_m
+
+# Initialize priors
+priors = Dict("θ" => (zeros(N_m,), 10 .*Matrix{Float64}(I,N_m,N_m)), "τ" => (1e4, 1e0))
+
+# RLS forgetting factor
+λ = 1.00
+
 # Basis function model
 PΦ = zeros(M_m,0)
 for d=1:deg_m; global PΦ = hcat(d .*Matrix{Float64}(I,M_m,M_m), PΦ); end
 ϕ(x::Array{Float64,1}) = [prod(x.^PΦ[:,k]) for k = 1:size(PΦ,2)]
 
+"""Experimental parameters"""
+
 # Series of train sizes
-trn_sizes = [100, 200, 400, 800, 1600, 3200, 6400]
+trn_sizes = [100, 200, 400, 800, 1600, 3200, 6400, 12800]
 num_trnsizes = length(trn_sizes)
 
 # Define transient and test indices
 transient = 1000
 ix_tst = collect(1:1000) .+ transient
 
-# Repetitions
+# Number of VMP iterations
+num_iters = 5
+
+# Number of repetitions
 num_repeats = 10
+
+# Switch to compute FE
+computeFE = true
+
+"""Run experiments"""
+
+# Preallocate results arrays
 results_sim_FEM = zeros(num_repeats, num_trnsizes)
 results_prd_FEM = zeros(num_repeats, num_trnsizes)
 results_sim_RLS = zeros(num_repeats, num_trnsizes)
 results_prd_RLS = zeros(num_repeats, num_trnsizes)
 
-# Free energy
-computeFE = true
+# Preallocate free energy arrays
 avg_FE = zeros(num_repeats, num_trnsizes)
 fin_FE = zeros(num_repeats, num_trnsizes)
 
@@ -105,7 +126,7 @@ eval(Meta.parse(source_code))
         output_tst = mat_data["yTest"][ix_tst]
 
         # Experiments
-        RMS_sim_FEM[n], RMS_prd_FEM[n], FE = experiment_FEM(input_trn, output_trn, input_tst, output_tst, ϕ, M1=M1_m, M2=M2_m, M3=M3_m, N=N_m, num_iters=num_iters, computeFE=computeFE)
+        RMS_sim_FEM[n], RMS_prd_FEM[n], FE = experiment_FEM(input_trn, output_trn, input_tst, output_tst, ϕ, priors, M1=M1_m, M2=M2_m, M3=M3_m, N=N_m, num_iters=num_iters, computeFE=computeFE)
         avg_FE_r[n] = mean(FE[:,end])
         fin_FE_r[n] = FE[end,end]
 

@@ -44,7 +44,7 @@ function model_specification(ϕ; M1=M1, M2=M2, M3=M3, M=M)
     
 end
 
-function experiment_FEM(input_trn, output_trn, input_tst, output_tst, ϕ; M1=1, M2=1, M3=1, N=3, num_iters=5, computeFE=false)
+function experiment_FEM(input_trn, output_trn, input_tst, output_tst, ϕ, priors; M1=1, M2=1, M3=1, N=3, num_iters=5, computeFE=false)
 
     # Maximum delay
     maxM = maximum([M1,M2,M3])
@@ -61,9 +61,9 @@ function experiment_FEM(input_trn, output_trn, input_tst, output_tst, ϕ; M1=1, 
 
     "Inference execution"
 
-    # Initialize priors
-    θ_k = (zeros(N,), 1 .*Matrix{Float64}(I,N,N))
-    τ_k = (4e5, 1e1)
+    # Extract prior parameters
+    θ_k = priors["θ"]
+    τ_k = priors["τ"]
 
     # Initialize marginals
     marginals = Dict(:θ => ProbabilityDistribution(Multivariate, GaussianMeanVariance, m=θ_k[1], v=θ_k[2]),
