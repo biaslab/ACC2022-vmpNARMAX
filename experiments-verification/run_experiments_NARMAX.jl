@@ -8,7 +8,7 @@ using ForneyLab
 import ForneyLab: unsafeMean, unsafeCov
 using NARMAX
 
-include("gen_signal.jl")
+# include("gen_signal.jl")
 include("experiments-NARMAX.jl")
 
 
@@ -54,7 +54,8 @@ M_m = M1_m + 1 + M2_m + M3_m
 N_m = M_m*deg_m
 
 # Initialize priors
-priors = Dict("θ" => (zeros(N_m,), 10 .*Matrix{Float64}(I,N_m,N_m)), "τ" => (1e4, 1e0))
+priors = Dict("θ" => (zeros(N_m,), 10 .*Matrix{Float64}(I,N_m,N_m)), 
+              "τ" => (1e4, 1e0))
 
 # RLS forgetting factor
 λ = 1.00
@@ -67,11 +68,13 @@ for d=1:deg_m; global PΦ = hcat(d .*Matrix{Float64}(I,M_m,M_m), PΦ); end
 """Experimental parameters"""
 
 # Series of train sizes
-trn_sizes = [100, 200, 400, 800, 1600, 3200, 6400, 12800]
+trn_sizes = 2 .^collect(8:12)
+# trn_sizes = [500, 1000, 2000, 4000]
+# trn_sizes = [200, 400, 800, 1600]
 num_trnsizes = length(trn_sizes)
 
 # Define transient and test indices
-transient = 1000
+transient = 0
 ix_tst = collect(1:1000) .+ transient
 
 # Number of VMP iterations
@@ -126,9 +129,16 @@ eval(Meta.parse(source_code))
         output_tst = mat_data["yTest"][ix_tst]
 
         # Experiments
-        RMS_sim_FEM[n], RMS_prd_FEM[n], FE = experiment_FEM(input_trn, output_trn, input_tst, output_tst, ϕ, priors, M1=M1_m, M2=M2_m, M3=M3_m, N=N_m, num_iters=num_iters, computeFE=computeFE)
-        avg_FE_r[n] = mean(FE[:,end])
-        fin_FE_r[n] = FE[end,end]
+        try
+            RMS_sim_FEM[n], RMS_prd_FEM[n], FE = experiment_FEM(input_trn, output_trn, input_tst, output_tst, ϕ, priors, M1=M1_m, M2=M2_m, M3=M3_m, N=N_m, num_iters=num_iters, computeFE=computeFE)
+            avg_FE_r[n] = mean(FE[:,end])
+            fin_FE_r[n] = FE[end,end]
+        catch DomainError
+            RMS_sim_FEM[n] = NaN
+            RMS_prd_FEM[n] = NaN
+            avg_FE_r[n] = NaN
+            fin_FE_r[n] = NaN
+        end
 
         RMS_sim_RLS[n], RMS_prd_RLS[n] = experiment_RLS(input_trn, output_trn, input_tst, output_tst, ϕ, M1=M1_m, M2=M2_m, M3=M3_m, N=N_m, λ=λ)
     end
@@ -151,7 +161,7 @@ save("results/results-NARMAX_FEM_M"*string(M_m)*"_degree"*string(deg_m)*".jld", 
 save("results/results-NARMAX_RLS_M"*string(M_m)*"_degree"*string(deg_m)*".jld", "RMS_sim", results_sim_RLS, "RMS_prd", results_prd_RLS)
 
 # Report
-# println("Mean RMS prd FEM = "*string(mean(filter(!isinf, filter(!isnan, RMS_prd_FEM))))*" ("*string(length(filter(isnan, RMS_prd_FEM))/num_repeats)*"% rejected)")
-# println("Mean RMS sim FEM = "*string(mean(filter(!isinf, filter(!isnan, RMS_sim_FEM))))*" ("*string(length(filter(isnan, RMS_sim_FEM))/num_repeats)*"% rejected)")
-# println("Mean RMS prd RLS = "*string(mean(filter(!isinf, filter(!isnan, RMS_prd_RLS))))*" ("*string(length(filter(isnan, RMS_prd_RLS))/num_repeats)*"% rejected)")
-# println("Mean RMS sim RLS = "*string(mean(filter(!isinf, filter(!isnan, RMS_sim_RLS))))*" ("*string(length(filter(isnan, RMS_sim_RLS))/num_repeats)*"% rejected)")
+println("Mean RMS prd FEM = "*string(mean(filter(!isnan, results_prd_FEM)))*" ("*string(mean(isnan.(results_prd_FEM)))*"% rejected)")
+println("Mean RMS sim FEM = "*string(mean(filter(!isnan, results_sim_FEM)))*" ("*string(mean(isnan.(results_sim_FEM)))*"% rejected)")
+println("Mean RMS prd RLS = "*string(mean(filter(!isnan, results_prd_RLS)))*" ("*string(mean(isnan.(results_prd_FEM)))*"% rejected)")
+println("Mean RMS sim RLS = "*string(mean(filter(!isnan, results_sim_RLS)))*" ("*string(mean(isnan.(results_sim_FEM)))*"% rejected)")
