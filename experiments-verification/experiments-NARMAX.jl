@@ -5,8 +5,8 @@ using ForneyLab
 using NARMAX
 using MAT
 
-import ForneyLab: unsafeMean, unsafeCov
-include("gen_signal.jl")
+import ForneyLab: unsafeMean, unsafeCov, unsafePrecision
+# include("gen_signal.jl")
 
 
 function generate_data(ϕ; θ_scale=0.1, τ_true=1e3, degree=1, M1=1, M2=1, M3=1, fMin=0.8, fMax=1.0, fs=1.0, uStd=1., T=100, split_index=50, start_index=10, num_periods=num_periods, points_period=points_period)
@@ -25,17 +25,17 @@ function model_specification(ϕ; M1=M1, M2=M2, M3=M3, M=M)
     graph = FactorGraph()
 
     # Observed variables
-    @RV y_kmin1; placeholder(y_kmin1, :y_kmin1, dims=(M1,))
-    @RV u_kmin1; placeholder(u_kmin1, :u_kmin1, dims=(M2,))
+    @RV u_kmin1; placeholder(u_kmin1, :u_kmin1, dims=(M1,))
+    @RV y_kmin1; placeholder(y_kmin1, :y_kmin1, dims=(M2,))
     @RV e_kmin1; placeholder(e_kmin1, :e_kmin1, dims=(M3,))
     @RV u_k; placeholder(u_k, :u_k)
 
     # Time-invariant parameters
-    @RV θ ~ GaussianMeanVariance(placeholder(:m_θ, dims=(M,)), placeholder(:v_θ, dims=(M,M)))
+    @RV θ ~ GaussianMeanPrecision(placeholder(:m_θ, dims=(M,)), placeholder(:w_θ, dims=(M,M)))
     @RV τ ~ Gamma(placeholder(:a_τ), placeholder(:b_τ))
 
     # Likelihood
-    @RV y_k ~ NAutoRegressiveMovingAverageX(θ, y_kmin1, u_k, u_kmin1, e_kmin1, τ, g=ϕ)
+    @RV y_k ~ NAutoRegressiveMovingAverageX(θ, u_k, u_kmin1, y_kmin1, e_kmin1, τ, ϕ=ϕ)
     placeholder(y_k, :y_k)
 
     q = PosteriorFactorization(θ, τ, ids=[:θ :τ])
@@ -66,7 +66,7 @@ function experiment_FEM(input_trn, output_trn, input_tst, output_tst, ϕ, priors
     τ_k = priors["τ"]
 
     # Initialize marginals
-    marginals = Dict(:θ => ProbabilityDistribution(Multivariate, GaussianMeanVariance, m=θ_k[1], v=θ_k[2]),
+    marginals = Dict(:θ => ProbabilityDistribution(Multivariate, GaussianMeanPrecision, m=θ_k[1], w=θ_k[2]),
                      :τ => ProbabilityDistribution(Univariate, Gamma, a=τ_k[1], b=τ_k[2]))
 
     # Preallocate free energy array
@@ -83,13 +83,13 @@ function experiment_FEM(input_trn, output_trn, input_tst, output_tst, ϕ, priors
     for (ii,k) in enumerate(maxM+1:T_trn)
         
         # Update history vectors
-        y_kmin1 = output_trn[k-1:-1:k-M1]
-        u_kmin1 = input_trn[k-1:-1:k-M2]
+        u_kmin1 = input_trn[k-1:-1:k-M1]
+        y_kmin1 = output_trn[k-1:-1:k-M2]
         e_kmin1 = errors[k-1:-1:k-M3]
         
-        ϕx = ϕ([y_kmin1; input_trn[k]; u_kmin1; e_kmin1])
+        ϕx = ϕ([input_trn[k]; u_kmin1; y_kmin1; e_kmin1])
         predictions[1][k] = θ_k[1]'*ϕx
-        predictions[2][k] = ϕx'*θ_k[2]'*ϕx + inv(τ_k[1]/τ_k[2])
+        predictions[2][k] = ϕx'*inv(θ_k[2])*ϕx + inv(τ_k[1]/τ_k[2])
 
         # Compute prediction error
         errors[k] = output_trn[k] - predictions[1][k]
@@ -97,11 +97,11 @@ function experiment_FEM(input_trn, output_trn, input_tst, output_tst, ϕ, priors
         # Set data 
         data = Dict(:y_k => output_trn[k],
                     :u_k => input_trn[k],
-                    :y_kmin1 => y_kmin1,
                     :u_kmin1 => u_kmin1,
+                    :y_kmin1 => y_kmin1,
                     :e_kmin1 => e_kmin1,
                     :m_θ => θ_k[1],
-                    :v_θ => θ_k[2],
+                    :w_θ => θ_k[2],
                     :a_τ => τ_k[1],
                     :b_τ => τ_k[2])
         
@@ -120,7 +120,7 @@ function experiment_FEM(input_trn, output_trn, input_tst, output_tst, ϕ, priors
         end 
         
         # Update params
-        θ_k = (unsafeMean(marginals[:θ]), unsafeCov(marginals[:θ]))
+        θ_k = (unsafeMean(marginals[:θ]), unsafePrecision(marginals[:θ]))
         τ_k = (marginals[:τ].params[:a], marginals[:τ].params[:b])
         
         # Store params
@@ -140,14 +140,14 @@ function experiment_FEM(input_trn, output_trn, input_tst, output_tst, ϕ, priors
     for k in maxM+1:T_tst
         
         # Update history vectors
-        y_kmin1 = output_tst[k-1:-1:k-M1]
-        u_kmin1 = input_tst[k-1:-1:k-M2]
+        u_kmin1 = input_tst[k-1:-1:k-M1]
+        y_kmin1 = output_tst[k-1:-1:k-M2]
         e_kmin1 = errors[k-1:-1:k-M3]
             
         # Posterior predictive
-        ϕx = ϕ([y_kmin1; input_tst[k]; u_kmin1; e_kmin1])
+        ϕx = ϕ([input_tst[k]; u_kmin1; y_kmin1; e_kmin1])
         predictions[1][k] = θ_k[1]'*ϕx
-        predictions[2][k] = ϕx'*θ_k[2]*ϕx + inv(τ_k[1] / τ_k[2])
+        predictions[2][k] = ϕx'*inv(θ_k[2])*ϕx + inv(τ_k[1] / τ_k[2])
 
         # Update error
         errors[k] = output_tst[k] - predictions[1][k]
@@ -162,14 +162,14 @@ function experiment_FEM(input_trn, output_trn, input_tst, output_tst, ϕ, priors
     for k in maxM+1:T_tst
         
         # Update history vectors
-        y_kmin1 = simulations[1][k-1:-1:k-M1]
-        u_kmin1 = input_tst[k-1:-1:k-M2]
+        u_kmin1 = input_tst[k-1:-1:k-M1]
+        y_kmin1 = simulations[1][k-1:-1:k-M2]
         e_kmin1 = zeros(M3,)
             
         # Posterior predictive
-        ϕx = ϕ([y_kmin1; input_tst[k]; u_kmin1; e_kmin1])
+        ϕx = ϕ([input_tst[k]; u_kmin1; y_kmin1; e_kmin1])
         simulations[1][k] = θ_k[1]'*ϕx
-        simulations[2][k] = ϕx'*θ_k[2]*ϕx + inv(τ_k[1] / τ_k[2])
+        simulations[2][k] = ϕx'*inv(θ_k[2])*ϕx + inv(τ_k[1] / τ_k[2])
         
     end
 
@@ -206,9 +206,14 @@ function experiment_RLS(input_trn, output_trn, input_tst, output_tst, ϕ; M1=1, 
     errors = zeros(T_trn,)
 
     for (ii,k) in enumerate(maxM+1:T_trn)
+
+        # Update history vectors
+        u_kmin1 = input_trn[k-1:-1:k-M1]
+        y_kmin1 = output_trn[k-1:-1:k-M2]
+        e_kmin1 = errors[k-1:-1:k-M3]
         
         # Update data vector
-        ϕx = ϕ([output_trn[k-1:-1:k-M1]; input_trn[k:-1:k-M2]; errors[k-1:-1:k-M3]])
+        ϕx = ϕ([input_trn[k]; u_kmin1; y_kmin1; e_kmin1])
         
         # Update weights
         α = output_trn[k] - w_k'*ϕx 
@@ -231,12 +236,12 @@ function experiment_RLS(input_trn, output_trn, input_tst, output_tst, ϕ; M1=1, 
     for k in maxM+1:T_tst
         
         # Update history vectors
-        y_kmin1 = output_tst[k-1:-1:k-M1]
-        u_kmin1 = input_tst[k-1:-1:k-M2]
+        u_kmin1 = input_tst[k-1:-1:k-M1]
+        y_kmin1 = output_tst[k-1:-1:k-M2]
         e_kmin1 = errors[k-1:-1:k-M3]
             
         # Posterior predictive
-        ϕx = ϕ([y_kmin1; input_tst[k]; u_kmin1; e_kmin1])
+        ϕx = ϕ([input_tst[k]; u_kmin1; y_kmin1; e_kmin1])
         predictions[k] = w_k'*ϕx
 
         # Update error
@@ -252,12 +257,12 @@ function experiment_RLS(input_trn, output_trn, input_tst, output_tst, ϕ; M1=1, 
     for k in maxM+1:T_tst
         
         # Update history vectors
-        y_kmin1 = simulations[k-1:-1:k-M1]
-        u_kmin1 = input_tst[k-1:-1:k-M2]
+        u_kmin1 = input_tst[k-1:-1:k-M1]
+        y_kmin1 = simulations[k-1:-1:k-M2]
         e_kmin1 = zeros(M3,)
             
         # Posterior predictive
-        ϕx = ϕ([y_kmin1; input_tst[k]; u_kmin1; e_kmin1])
+        ϕx = ϕ([input_tst[k]; u_kmin1; y_kmin1; e_kmin1])
         simulations[k] = w_k'*ϕx
         
     end

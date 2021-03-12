@@ -4,6 +4,8 @@ close all
 clear all
 clc
 
+addpath(genpath("baselines"))
+
 %% set variables
 transient = 1:10;
 iTrain = 1:1000 + transient(end);
@@ -17,8 +19,8 @@ nd = 3; % # degree polynomial nonlinearity
 N = 2^16;
 P = 1;
 
-stdu = .1;
-stde = .01;
+stdu = 0.1;
+stde = .005;
 
 %% Define system
 dataTemp.u = randn(100,1);
@@ -38,12 +40,12 @@ nComb = size(sysComb,2);
 [b,a] = butter(nb,0.1);% set linear components equal to butterworth filter
 
 sysTheta = zeros(nComb,1);
-sysTheta(2:nd:nd*(nb+1+na)) = 0.001*(rand(nb+1+na,1)-0.5); % even terms
-sysTheta(3:nd:nd*(nb+1+na)) = 0.001*(rand(nb+1+na,1)-0.5); % odd terms
+sysTheta(2:nd:nd*(nb+1+na)) = 0.01*(rand(nb+1+na,1)-0.5); % even terms
+sysTheta(3:nd:nd*(nb+1+na)) = 0.01*(rand(nb+1+na,1)-0.5); % odd terms
 sysTheta(1:nd:(nb+1)*nd)=b;
 sysTheta((nb+1)*nd+1:nd:(nb+1)*nd+na*nd)=-a(2:end);
 sysTheta((nb+1+na)*nd+1:nd:(nb+1+na)*nd+ne*nd)=0.1;
-sysTheta(end-nd+2:end)=10*(rand(nd-1,1)-0.5); % nl terms noise
+sysTheta(end-nd+2:end)=100*(rand(nd-1,1)-0.5); % nl terms noise
 
 ToySystem.nb = nb;
 ToySystem.na = na;

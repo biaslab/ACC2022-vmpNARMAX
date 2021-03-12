@@ -5,7 +5,7 @@ using ProgressMeter
 using LinearAlgebra
 
 using ForneyLab
-import ForneyLab: unsafeMean, unsafeCov
+import ForneyLab: unsafeMean, unsafeCov, unsafePrecision
 using NARMAX
 
 # include("gen_signal.jl")
@@ -18,10 +18,10 @@ include("experiments-NARMAX.jl")
 deg_t = 3
 
 # Orders
-M1_t = 3
-M2_t = 3
-M3_t = 3
-M_t = M1_t + 1 + M2_t + M3_t
+M1_t = 1
+M2_t = 1
+M3_t = 1
+M_t = 1 + M1_t + M2_t + M3_t
 N_t = M_t*deg_t
 
 # Input signal params
@@ -47,15 +47,15 @@ for d=1:deg_t; global PΨ = hcat(d .*Matrix{Float64}(I,M_t,M_t), PΨ); end
 deg_m = 3
 
 # Orders
-M1_m = 3
-M2_m = 3
-M3_m = 3
-M_m = M1_m + 1 + M2_m + M3_m
+M1_m = 1
+M2_m = 1
+M3_m = 1
+M_m = 1 + M1_m + M2_m + M3_m
 N_m = M_m*deg_m
 
 # Initialize priors
-priors = Dict("θ" => (zeros(N_m,), 10 .*Matrix{Float64}(I,N_m,N_m)), 
-              "τ" => (1e4, 1e0))
+priors = Dict("θ" => (zeros(N_m,), 1e-1 .*Matrix{Float64}(I,N_m,N_m)), 
+              "τ" => (2e3, 1e0))
 
 # RLS forgetting factor
 λ = 1.00
@@ -68,9 +68,7 @@ for d=1:deg_m; global PΦ = hcat(d .*Matrix{Float64}(I,M_m,M_m), PΦ); end
 """Experimental parameters"""
 
 # Series of train sizes
-trn_sizes = 2 .^collect(8:12)
-# trn_sizes = [500, 1000, 2000, 4000]
-# trn_sizes = [200, 400, 800, 1600]
+trn_sizes = 2 .^collect(6:12)
 num_trnsizes = length(trn_sizes)
 
 # Define transient and test indices
@@ -81,7 +79,7 @@ ix_tst = collect(1:1000) .+ transient
 num_iters = 5
 
 # Number of repetitions
-num_repeats = 10
+num_repeats = 100
 
 # Switch to compute FE
 computeFE = true
@@ -116,7 +114,7 @@ eval(Meta.parse(source_code))
     # input, output, ix_trn, ix_val = generate_data(ψ, θ_scale=θ_scale, τ_true=τ_true, degree=deg_t, M1=M1_t, M2=M2_t, M3=M3_t, fMin=fMin, fMax=fMax, fs=fs, uStd=uStd, T=time_horizon, split_index=split_index, start_index=start_index, num_periods=num_periods, points_period=points_period)
     
     # Read from Maarten's code
-    mat_data = matread("data/NARMAXsignal_r"*string(r)*".mat")
+    mat_data = matread("data/NARMAXsignal_order"*string(M_m)*"_r"*string(r)*".mat")
 
     for n = 1:num_trnsizes
 
@@ -161,7 +159,7 @@ save("results/results-NARMAX_FEM_M"*string(M_m)*"_degree"*string(deg_m)*".jld", 
 save("results/results-NARMAX_RLS_M"*string(M_m)*"_degree"*string(deg_m)*".jld", "RMS_sim", results_sim_RLS, "RMS_prd", results_prd_RLS)
 
 # Report
-println("Mean RMS prd FEM = "*string(mean(filter(!isnan, results_prd_FEM)))*" ("*string(mean(isnan.(results_prd_FEM)))*"% rejected)")
-println("Mean RMS sim FEM = "*string(mean(filter(!isnan, results_sim_FEM)))*" ("*string(mean(isnan.(results_sim_FEM)))*"% rejected)")
-println("Mean RMS prd RLS = "*string(mean(filter(!isnan, results_prd_RLS)))*" ("*string(mean(isnan.(results_prd_FEM)))*"% rejected)")
-println("Mean RMS sim RLS = "*string(mean(filter(!isnan, results_sim_RLS)))*" ("*string(mean(isnan.(results_sim_FEM)))*"% rejected)")
+println("Mean RMS prd FEM = "*string(mean(filter(!isinf, filter(!isnan, results_prd_FEM))))*" ("*string(mean(isnan.(results_prd_FEM)))*"% rejected)")
+println("Mean RMS sim FEM = "*string(mean(filter(!isinf, filter(!isnan, results_sim_FEM))))*" ("*string(mean(isnan.(results_sim_FEM)))*"% rejected)")
+println("Mean RMS prd RLS = "*string(mean(filter(!isinf, filter(!isnan, results_prd_RLS))))*" ("*string(mean(isnan.(results_prd_FEM)))*"% rejected)")
+println("Mean RMS sim RLS = "*string(mean(filter(!isinf, filter(!isnan, results_sim_RLS))))*" ("*string(mean(isnan.(results_sim_FEM)))*"% rejected)")

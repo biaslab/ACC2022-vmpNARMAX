@@ -2,21 +2,21 @@ close all;
 clear all;
 clc;
 
-% addpath(genpath("baselines"));
+addpath(genpath("baselines"));
 
 %%
 
 % Series of train sizes
-trn_sizes = [100, 500, 1000, 5000];
+trn_sizes = 2.^[6:12];
 num_trnsizes = length(trn_sizes);
 
 % Define transient and test indices
-transient = 1000;
-ix_tst = 1:1000 + transient;
+transient = 0;
+ix_tst = [1:1000] + transient;
 
-options.na = 3; % # output delays
-options.nb = 3; % # input delays
-options.ne = 3; % # innovation delays
+options.na = 1; % # output delays
+options.nb = 1; % # input delays
+options.ne = 1; % # innovation delays
 options.nd = 3; % # degree polynomial nonlinearity
 
 M_m = options.na + 1 + options.nb + options.ne;
@@ -30,32 +30,38 @@ options.fMax = 100;
 options.fs = 1000;
 options.type = 'odd';
 
-options.stdu = 0.5;
-options.stde = .01;
+options.stdu = 1.0;
+options.stde = .02;
+
+options.normalize = false;
 
 % Number of repetitions
 num_repeats = 100;
 
 % Preallocate result arrays
-RMS_prd = zeros(num_repeats, num_trnsizes);
-RMS_sim = zeros(num_repeats, num_trnsizes);
+results_prd = zeros(num_repeats, num_trnsizes);
+results_sim = zeros(num_repeats, num_trnsizes);
 
 r = 1;
 while r <= num_repeats
-    waitbar(r/num_repeats)
+    dbox = waitbar(r/num_repeats);
     
     % Generate signal
-    [yTrain, yTest, uTrain, uTest] = gen_signal(options);
+    [yTrain, yTest, uTrain, uTest, theta] = gen_signal(options);
     
-    if max(yTrain) < 1e3
+    if (max(abs(yTrain)) < 100) && (sum(isnan(yTrain))==0)
     
         % Write signal to file
-        save("data/NARMAXsignal_r" + string(r) + ".mat", "yTrain", "yTest", "uTrain", "uTest", "options")
+        save("data/NARMAXsignal_order" + string(M_m) + "_r" + string(r) + ".mat", "yTrain", "yTest", "uTrain", "uTest", "theta", "options")
         
-        for n = 1:length(trn_sizes)
+        % Preallocate result arrays
+        RMS_prd = zeros(1,num_trnsizes);
+        RMS_sim = zeros(1,num_trnsizes);
+        
+        for n = 1:num_trnsizes
             
             % Establish length of training signal
-            ix_trn = 1:trn_sizes(n) + transient;
+            ix_trn = [1:trn_sizes(n)] + transient;
         
             % Slice data
             dataTrain.u = uTrain(ix_trn);
@@ -63,7 +69,7 @@ while r <= num_repeats
             dataTest.u = uTest(ix_tst);
             dataTest.y = yTest(ix_tst);
 
-            % KLS estimator
+            % ILS estimator
             [modelNarmaxIter,eNarmaxIter] = fEstPolNarmax(dataTrain,options);
 
             % 1-step ahead prediction
@@ -73,21 +79,33 @@ while r <= num_repeats
             ySimIterTest = fSimPolNarmax(dataTest,modelNarmaxIter);
 
             % Compute RMS
-            RMS_prd(r,n) = rms(dataTest.y - yPredIterTest);
-            RMS_sim(r,n) = rms(dataTest.y - ySimIterTest);
-            
-            % Write results to file
-            save("results/results-NARMAX_FEM_M"+num2str(M_m)+"_degree3_S"+string(length(ix_trn))+".mat", "RMS_prd", "RMS_sim")
+            RMS_prd(n) = rms(dataTest.y - yPredIterTest);
+            RMS_sim(n) = rms(dataTest.y - ySimIterTest);
             
         end
+        
+        % Write results to file
+        save("results/results-NARMAX_ILS_M"+num2str(M_m)+"_degree3_r"+num2str(r)+".mat", "RMS_prd", "RMS_sim")
+        
+        results_prd(r,:) = RMS_prd;
+        results_sim(r,:) = RMS_sim;
         
         % Increment repeat
         r = r + 1;
     end    
 end
+close(dbox) 
+
+% Write results to file
+save("results/results-NARMAX_ILS_M"+num2str(M_m)+"_degree3.mat", "results_prd", "results_sim")
+
+results_prd(results_prd == Inf) = NaN;
+results_sim(results_sim == Inf) = NaN;
+results_prd(results_prd > 10) = NaN;
+results_sim(results_sim > 10) = NaN;
 
 disp("RMS");
-[nanmean(RMS_prd,1); nanmean(RMS_sim,1)]
+[nanmean(results_prd,1); nanmean(results_sim,1)]
 
 disp("Proportion instable");
-[sum(isnan(RMS_prd)); sum(isnan(RMS_sim))]
+[mean(isnan(results_prd)); mean(isnan(results_sim))]

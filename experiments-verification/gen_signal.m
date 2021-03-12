@@ -1,4 +1,4 @@
-function [yTrain, yTest, uTrain, uTest] = gen_signal(options)
+function [yTrain, yTest, uTrain, uTest, sysTheta] = gen_signal(options)
 
 % Unpack options
 na = options.na;
@@ -27,10 +27,10 @@ nComb = size(sysComb,2);
 sysTheta = zeros(nComb,1);
 sysTheta(2:nd:nd*(nb+1+na)) = 0.01*(rand(nb+1+na,1)-0.5); % even terms
 sysTheta(3:nd:nd*(nb+1+na)) = 0.01*(rand(nb+1+na,1)-0.5); % odd terms
-sysTheta(1:nd:(nb+1)*nd)=b;
-sysTheta((nb+1)*nd+1:nd:(nb+1)*nd+na*nd)=-a(2:end);
-sysTheta((nb+1+na)*nd+1:nd:(nb+1+na)*nd+ne*nd)=0.1;
-sysTheta(end-nd+2:end)=100*(rand(nd-1,1)-0.5); % nl terms noise
+sysTheta(1:nd:(nb+1)*nd) = b;
+sysTheta((nb+1)*nd+1:nd:(nb+1)*nd+na*nd) = -a(2:end);
+sysTheta((nb+1+na)*nd+1:nd:(nb+1+na)*nd+ne*nd) = 0.1;
+sysTheta(end-nd+2:end) = 100.0*(rand(nd-1,1)-0.5); % nl terms noise
 
 ToySystem.nb = nb;
 ToySystem.na = na;
@@ -56,5 +56,15 @@ dataSysTest.e = stde*randn(size(uTest));
 
 yTrain = fSimPolNarmax(dataSysTrain,ToySystem);
 yTest = fSimPolNarmax(dataSysTest,ToySystem);
+
+if options.normalize
+   
+    max_value = max(abs([yTrain; yTest; uTrain; uTest]));
+    yTrain = yTrain ./ max_value;
+    yTest = yTest ./ max_value;
+    uTrain = uTrain ./ max_value;
+    uTest = uTest ./ max_value;
+    
+end
 
 end
