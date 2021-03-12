@@ -9,7 +9,7 @@ import ForneyLab: unsafeMean, unsafeCov, unsafePrecision
 using NARMAX
 
 # include("gen_signal.jl")
-include("experiments-NARMAX.jl")
+include("experiments_NARMAX.jl")
 
 
 """System parameters"""

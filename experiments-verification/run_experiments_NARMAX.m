@@ -2,7 +2,7 @@ close all;
 clear all;
 clc;
 
-addpath(genpath("baselines"));
+addpath(genpath("offline-baseline"));
 
 %%
 
