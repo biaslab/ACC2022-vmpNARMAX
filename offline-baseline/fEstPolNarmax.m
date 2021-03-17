@@ -30,7 +30,7 @@ for ii=2:nb+na+1
 end
 % noise terms
 if options.noiseCrossTerms
-    for ii=nb+na+1:nk
+    for ii=nb+na+2:nk
         comb = [repmat(comb,1,nd+1); kron([0:nd],ones(1,size(comb,2)))];
 
         % remove combinations which have degree higher than nd
@@ -100,3 +100,4 @@ model.na = na;
 model.ne = ne;
 model.comb = comb;
 model.theta = theta;
+

@@ -20,12 +20,12 @@ e = zeros(size(u));
 yPred = zeros(size(u));
 for ii=nc+1:N+nc
     % construct regressor vector
-    KLin = [u(ii:-1:ii-nb); y(ii-1:-1:ii-na); e(ii-1:-1:ii-ne)].'; % row vector
+    KLin = [u(ii:-1:ii-nb); y(ii-1:-1:ii-na); e(ii-1:-1:ii-ne)]'; % row vector
 
     K = ones(1,nComb);
     for kk=1:nComb
         for jj=1:nk
-            K(1,kk) = K(1,kk).*KLin(1,jj).^comb(jj,kk);
+            K(1,kk) = K(1,kk).*(KLin(1,jj).^comb(jj,kk));
         end
     end
     
@@ -36,3 +36,4 @@ for ii=nc+1:N+nc
 end
 yPred = yPred(nc+1:end); %remove zero padding part    
 ePred = e(nc+1:end); %remove zero padding part 
+
