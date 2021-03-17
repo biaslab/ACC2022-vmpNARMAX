@@ -8,7 +8,6 @@ using ForneyLab
 import ForneyLab: unsafeMean, unsafeCov, unsafePrecision
 using NARMAX
 
-# include("gen_signal.jl")
 include("experiments_NARMAX.jl")
 
 
@@ -51,7 +50,19 @@ M1_m = 1
 M2_m = 1
 M3_m = 1
 M_m = 1 + M1_m + M2_m + M3_m
-N_m = M_m*deg_m
+
+# Basis function model
+options = Dict()
+options["na"] = M1_m
+options["nb"] = M2_m
+options["ne"] = M3_m
+options["nd"] = deg_m
+options["dc"] = false
+options["crossTerms"] = true
+options["noiseCrossTerms"] = true
+PΦ = gen_combs(options)
+ϕ(x::Array{Float64,1}) = [prod(x.^PΦ[:,k]) for k = 1:size(PΦ,2)]
+N_m = size(PΦ,2)
 
 # Initialize priors
 priors = Dict("θ" => (zeros(N_m,), 1e-1 .*Matrix{Float64}(I,N_m,N_m)), 
@@ -60,15 +71,10 @@ priors = Dict("θ" => (zeros(N_m,), 1e-1 .*Matrix{Float64}(I,N_m,N_m)),
 # RLS forgetting factor
 λ = 1.00
 
-# Basis function model
-PΦ = zeros(M_m,0)
-for d=1:deg_m; global PΦ = hcat(d .*Matrix{Float64}(I,M_m,M_m), PΦ); end
-ϕ(x::Array{Float64,1}) = [prod(x.^PΦ[:,k]) for k = 1:size(PΦ,2)]
-
 """Experimental parameters"""
 
 # Series of train sizes
-trn_sizes = 2 .^collect(6:12)
+trn_sizes = 2 .^collect(6:14)
 num_trnsizes = length(trn_sizes)
 
 # Define transient and test indices
@@ -114,12 +120,12 @@ eval(Meta.parse(source_code))
     # input, output, ix_trn, ix_val = generate_data(ψ, θ_scale=θ_scale, τ_true=τ_true, degree=deg_t, M1=M1_t, M2=M2_t, M3=M3_t, fMin=fMin, fMax=fMax, fs=fs, uStd=uStd, T=time_horizon, split_index=split_index, start_index=start_index, num_periods=num_periods, points_period=points_period)
     
     # Read from Maarten's code
-    mat_data = matread("data/NARMAXsignal_order"*string(M_m)*"_r"*string(r)*".mat")
+    mat_data = matread("data/NARMAXsignal_order"*string(M_m)*"_N"*string(N_m)*"_r"*string(r)*".mat")
 
     for n = 1:num_trnsizes
 
         # Establish length of training signal
-        ix_trn = collect(1:trn_sizes[n]) .+ transient
+        ix_trn  = collect(1:trn_sizes[n]) .+ transient
 
         input_trn = mat_data["uTrain"][ix_trn]
         input_tst = mat_data["uTest"][ix_tst]
@@ -142,8 +148,8 @@ eval(Meta.parse(source_code))
     end
 
     # Write results to file
-    save("results/results-NARMAX_FEM_M"*string(M_m)*"_degree"*string(deg_m)*"_r"*string(r)*".jld", "RMS_sim", RMS_sim_FEM, "RMS_prd", RMS_prd_FEM, "avg_FE", avg_FE_r, "fin_FE", fin_FE_r)
-    save("results/results-NARMAX_RLS_M"*string(M_m)*"_degree"*string(deg_m)*"_r"*string(r)*".jld", "RMS_sim", RMS_sim_RLS, "RMS_prd", RMS_prd_RLS)
+    save("results/results-NARMAX_FEM_M"*string(M_m)*"_N"*string(N_m)*"_degree"*string(deg_m)*"_r"*string(r)*".jld", "RMS_sim", RMS_sim_FEM, "RMS_prd", RMS_prd_FEM, "avg_FE", avg_FE_r, "fin_FE", fin_FE_r)
+    save("results/results-NARMAX_RLS_M"*string(M_m)*"_N"*string(N_m)*"_degree"*string(deg_m)*"_r"*string(r)*".jld", "RMS_sim", RMS_sim_RLS, "RMS_prd", RMS_prd_RLS)
 
     results_prd_FEM[r,:] = RMS_prd_FEM
     results_sim_FEM[r,:] = RMS_sim_FEM
@@ -155,11 +161,8 @@ eval(Meta.parse(source_code))
 end
 
 # Write results to file
-save("results/results-NARMAX_FEM_M"*string(M_m)*"_degree"*string(deg_m)*".jld", "RMS_sim", results_sim_FEM, "RMS_prd", results_prd_FEM, "avg_FE", avg_FE, "fin_FE", fin_FE)
-save("results/results-NARMAX_RLS_M"*string(M_m)*"_degree"*string(deg_m)*".jld", "RMS_sim", results_sim_RLS, "RMS_prd", results_prd_RLS)
+println("Writing results to file")
+save("results/results-NARMAX_FEM_M"*string(M_m)*"_N"*string(N_m)*"_degree"*string(deg_m)*".jld", "RMS_sim", results_sim_FEM, "RMS_prd", results_prd_FEM, "avg_FE", avg_FE, "fin_FE", fin_FE)
+save("results/results-NARMAX_RLS_M"*string(M_m)*"_N"*string(N_m)*"_degree"*string(deg_m)*".jld", "RMS_sim", results_sim_RLS, "RMS_prd", results_prd_RLS)
 
-# Report
-println("Mean RMS prd FEM = "*string(mean(filter(!isinf, filter(!isnan, results_prd_FEM))))*" ("*string(mean(isnan.(results_prd_FEM)))*"% rejected)")
-println("Mean RMS sim FEM = "*string(mean(filter(!isinf, filter(!isnan, results_sim_FEM))))*" ("*string(mean(isnan.(results_sim_FEM)))*"% rejected)")
-println("Mean RMS prd RLS = "*string(mean(filter(!isinf, filter(!isnan, results_prd_RLS))))*" ("*string(mean(isnan.(results_prd_FEM)))*"% rejected)")
-println("Mean RMS sim RLS = "*string(mean(filter(!isinf, filter(!isnan, results_sim_RLS))))*" ("*string(mean(isnan.(results_sim_FEM)))*"% rejected)")
+println("Experiments complete.")

@@ -2,12 +2,13 @@ close all;
 clear all;
 clc;
 
-addpath(genpath("offline-baseline"));
+addpath(genpath("../offline-baseline"));
+addpath(genpath("gen-data"));
 
 %%
 
 % Series of train sizes
-trn_sizes = 2.^[6:12];
+trn_sizes = 2.^[6:14];
 num_trnsizes = length(trn_sizes);
 
 % Define transient and test indices
@@ -33,6 +34,9 @@ options.type = 'odd';
 options.stdu = 1.0;
 options.stde = .02;
 
+options.dc = false;
+options.crossTerms = true;
+options.noiseCrossTerms = true;
 options.normalize = false;
 
 % Number of repetitions
@@ -47,12 +51,14 @@ while r <= num_repeats
     dbox = waitbar(r/num_repeats);
     
     % Generate signal
-    [yTrain, yTest, uTrain, uTest, theta] = gen_signal(options);
+    [yTrain, yTest, uTrain, uTest, system] = gen_signal(options);
+    
+    N_m = size(system.comb,2);
     
     if (max(abs(yTrain)) < 100) && (sum(isnan(yTrain))==0)
     
         % Write signal to file
-        save("data/NARMAXsignal_order" + string(M_m) + "_r" + string(r) + ".mat", "yTrain", "yTest", "uTrain", "uTest", "theta", "options")
+        save("data/NARMAXsignal_order"+num2str(M_m)+"_N"+num2str(N_m)+"_r" + string(r) + ".mat", "yTrain", "yTest", "uTrain", "uTest", "system", "options")
         
         % Preallocate result arrays
         RMS_prd = zeros(1,num_trnsizes);
@@ -85,7 +91,7 @@ while r <= num_repeats
         end
         
         % Write results to file
-        save("results/results-NARMAX_ILS_M"+num2str(M_m)+"_degree3_r"+num2str(r)+".mat", "RMS_prd", "RMS_sim")
+        save("results/results-NARMAX_ILS_M"+num2str(M_m)+"_N"+num2str(N_m)+"_degree3_r"+num2str(r)+".mat", "RMS_prd", "RMS_sim")
         
         results_prd(r,:) = RMS_prd;
         results_sim(r,:) = RMS_sim;
@@ -97,7 +103,7 @@ end
 close(dbox) 
 
 % Write results to file
-save("results/results-NARMAX_ILS_M"+num2str(M_m)+"_degree3.mat", "results_prd", "results_sim")
+save("results/results-NARMAX_ILS_M"+num2str(M_m)+"_N"+num2str(N_m)+"_degree3.mat", "results_prd", "results_sim")
 
 results_prd(results_prd == Inf) = NaN;
 results_sim(results_sim == Inf) = NaN;

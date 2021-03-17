@@ -1,4 +1,4 @@
-function [yTrain, yTest, uTrain, uTest, sysTheta] = gen_signal(options)
+function [yTrain, yTest, uTrain, uTest, ToySystem] = gen_signal(options)
 
 % Unpack options
 na = options.na;
