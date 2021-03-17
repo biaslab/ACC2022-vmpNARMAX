@@ -1,3 +1,4 @@
+using LinearAlgebra
 using Plots
 pyplot()
 
@@ -66,7 +67,11 @@ function tmean(x::AbstractArray; tr::Real=0.2)
     Find the mean of `x`, omitting the lowest and highest `tr` fraction of the data.
     This requires `0 <= tr <= 0.5`. The amount of trimming defaults to `tr=0.2`.
     """
-    tmean!(copy(x), tr=tr)
+    if size(x,1) == 0
+        return NaN
+    else
+        tmean!(copy(x), tr=tr)
+    end
 end
 
 function tmean!(x::AbstractArray; tr::Real=0.2)
@@ -94,7 +99,11 @@ function trimse(x::AbstractArray; tr::Real=0.2)
     Estimated standard error of the mean for Winsorized real-valued array `x`.
     See `winval` for what Winsorizing (clipping) signifies.
     """
-    return sqrt(winvar(x,tr=tr))/((1-2tr)*sqrt(length(x)))
+    if size(x,1) == 0
+        return NaN
+    else
+        return sqrt(winvar(x,tr=tr))/((1-2tr)*sqrt(length(x)))
+    end
 end
 
 function winval(x::AbstractArray; tr::Real=0.2)
@@ -105,11 +114,15 @@ function winval(x::AbstractArray; tr::Real=0.2)
     value, as appropriate. The trimming fraction defaults to `tr=0.2`.
     """
     n = length(x)
-    xcopy   = sort(x)
-    ibot    = floor(Int64, tr*n)+1
-    itop    = n-ibot+1
-    xbot, xtop = xcopy[ibot], xcopy[itop]
-    return  [x[i]<=xbot ? xbot : (x[i]>=xtop ? xtop : x[i]) for i=1:n]
+    if n == 0
+        return NaN
+    else     
+        xcopy   = sort(x)
+        ibot    = floor(Int64, tr*n)+1
+        itop    = n-ibot+1
+        xbot, xtop = xcopy[ibot], xcopy[itop]
+        return  [x[i]<=xbot ? xbot : (x[i]>=xtop ? xtop : x[i]) for i=1:n]
+    end
 end
 
 function winmean(x::AbstractArray; tr=0.2)
