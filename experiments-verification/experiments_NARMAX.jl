@@ -1,8 +1,4 @@
-using JLD
-using MAT
-using ProgressMeter
 using LinearAlgebra
-
 using ForneyLab
 import ForneyLab: unsafeMean, unsafeCov, unsafePrecision
 using NARMAX
@@ -178,7 +174,11 @@ function experiment_FEM(input_trn, output_trn, input_tst, output_tst, ϕ, priors
     RMS_prd = sqrt(mean((predictions[1][maxM+1:end] - output_tst[maxM+1:end]).^2))
     RMS_sim = sqrt(mean((simulations[1][maxM+1:end] - output_tst[maxM+1:end]).^2))
 
-    return RMS_sim, RMS_prd, Fq
+    if computeFE
+        return RMS_sim, RMS_prd, Fq
+    else
+        return RMS_sim, RMS_prd
+    end
 end
 
 function experiment_RLS(input_trn, output_trn, input_tst, output_tst, ϕ; M1=1, M2=1, M3=1, N=1, λ=1.00)
@@ -273,62 +273,4 @@ function experiment_RLS(input_trn, output_trn, input_tst, output_tst, ϕ; M1=1, 
     RMS_sim = sqrt(mean((simulations[maxM+1:end] - output_tst[maxM+1:end]).^2))
 
     return RMS_sim, RMS_prd
-end
-
-function gen_combs(options)
-
-    na = options["na"]
-    nb = options["nb"]
-    ne = options["ne"]
-    nd = options["nd"]
-    nk = nb+na+ne+1
-    
-    # Repeat powers
-    comb = reshape(collect(0:nd), (1,nd+1))
-
-    # Start combinations array
-    combs = reshape(collect(0:nd), (1,nd+1))
-    for ii = 2:nb+na+1
-
-        # Current width
-        width = size(combs,2)
-
-        # Increment combinations array
-        combs = [repeat(combs,1,nd+1); kron(comb,ones(1,width))]
-        
-        # remove combinations which have degree higher than nd
-        ndComb = sum(combs,dims=1)
-        combs = combs[:, vec(ndComb .<= nd)]
-    end
-
-    if options["noiseCrossTerms"]
-        for ii = nb+na+2:nk
-
-            # Current width
-            width = size(combs,2)
-
-            # Add noise cross terms
-            combs = [repeat(combs,1,nd+1); kron(comb,ones(1,width))]
-    
-            # remove combinations which have degree higher than nd
-            ndComb = sum(combs, dims=1)
-            combs = combs[:, vec(ndComb .<= nd)]
-        end
-    else
-        for ii = nb+na+2:nk
-    #         noisecomb = [zeros(ii-1,1); 1]; % only linear terms
-            noisecomb = [zeros(ii-1, nd); reshape(collect(1:nd), 1,nd)]
-            combs = [[combs; zeros(1,size(combs,2))] noisecomb]
-        end
-    end
-
-    if !options["crossTerms"]
-        combs = combs[:, vec(sum(combs,dims=1) .> maximum(combs,dims=1))]
-    end
-    
-    if !options["dc"]
-        combs = combs[:,2:end]
-    end
-
-    return combs
 end

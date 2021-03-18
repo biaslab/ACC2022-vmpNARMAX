@@ -1,41 +1,62 @@
 using LinearAlgebra
-using Plots
-pyplot()
 
 
-function plot_forecast(output, predictions, ix_trn, ix_val; tt=1, posterior=false)
+function gen_combs(options)
 
-    T = length(output)
+    na = options["na"]
+    nb = options["nb"]
+    ne = options["ne"]
+    nd = options["nd"]
+    nk = nb+na+ne+1
+    
+    # Repeat powers
+    comb = reshape(collect(0:nd), (1,nd+1))
 
-    # Limits
-    ylims = [minimum(output[ix_trn[1]:end]), maximum(output[ix_trn[1]:end])]
+    # Start combinations array
+    combs = reshape(collect(0:nd), (1,nd+1))
+    for ii = 2:nb+na+1
 
-    # Plot training output
-    plot(ix_trn[1:tt:end], output[ix_trn[1:tt:end]], color="blue", ylims=ylims, label="training data", size=(800,300))
+        # Current width
+        width = size(combs,2)
 
-    # Plot validation output
-    scatter!(ix_val[1:tt:end], output[ix_val[1:tt:end]], color="black", ylims=ylims, label="validation data")
-
-    # Plot fit and forecast
-    if posterior
-        sdev = sqrt.(predictions[2][ix_trn[1]:tt:T])
-        plot!(ix_trn[1]:tt:T, predictions[1][ix_trn[1]:tt:T], ribbon=[sdev, sdev], color="purple", label="predictions")
-    else
-        plot!(ix_trn[1]:tt:T, predictions[ix_trn[1]:tt:T], color="purple", label="predictions")
+        # Increment combinations array
+        combs = [repeat(combs,1,nd+1); kron(comb,ones(1,width))]
+        
+        # remove combinations which have degree higher than nd
+        ndComb = sum(combs,dims=1)
+        combs = combs[:, vec(ndComb .<= nd)]
     end
-end
 
+    if options["noiseCrossTerms"]
+        for ii = nb+na+2:nk
 
-function plot_errors(output, predictions, ix_val)
+            # Current width
+            width = size(combs,2)
 
-    # Compute prediction errors
-    pred_errors = (predictions[ix_val] - output[ix_val]).^2
+            # Add noise cross terms
+            combs = [repeat(combs,1,nd+1); kron(comb,ones(1,width))]
+    
+            # remove combinations which have degree higher than nd
+            ndComb = sum(combs, dims=1)
+            combs = combs[:, vec(ndComb .<= nd)]
+        end
+    else
+        for ii = nb+na+2:nk
+    #         noisecomb = [zeros(ii-1,1); 1]; % only linear terms
+            noisecomb = [zeros(ii-1, nd); reshape(collect(1:nd), 1,nd)]
+            combs = [[combs; zeros(1,size(combs,2))] noisecomb]
+        end
+    end
 
-    # Compute root mean square
-    RMS = sqrt(mean(pred_errors))
+    if !options["crossTerms"]
+        combs = combs[:, vec(sum(combs,dims=1) .> maximum(combs,dims=1))]
+    end
+    
+    if !options["dc"]
+        combs = combs[:,2:end]
+    end
 
-    # Plot errors of time
-    scatter(pred_errors, label="RMS = "*string(RMS), ylabel="squared error", yscale=:log10, size=(800,300))
+    return combs
 end
 
 function tmean(x::AbstractArray, dims::Int64; tr::Real=0.2)
