@@ -49,7 +49,7 @@ function gen_combs(options)
     end
 
     if !options["crossTerms"]
-        combs = combs[:, vec(sum(combs,dims=1) .> maximum(combs,dims=1))]
+        combs = combs[:, vec(sum(combs,dims=1) .<= maximum(combs,dims=1))]
     end
     
     if !options["dc"]

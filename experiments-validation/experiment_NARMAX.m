@@ -2,6 +2,8 @@ close all;
 clear all;
 clc;
 
+addpath(genpath("../offline-baseline"));
+
 %%
 
 load('silverbox-data/SNLS80mV.mat')
@@ -12,7 +14,11 @@ options.nb = 3; % # input delays
 options.ne = 3; % # innovation delays
 options.nd = 3; % # degree polynomial nonlinearity
 
+options.ntran = 3;
+
 options.dc = true;
+options.crossTerms = true;
+options.noiseCrossTerms = false;
 
 M = options.na + 1 + options.nb + options.ne;
 
@@ -56,7 +62,7 @@ plot(dataTest.y - ySimIterTest)
 legend('system output','simulation error','prediction error')
 
 disp('  1-Step Ahead Prediction')
-disp(['  RMS Test Error: ' num2str(rms(dataTest.y - yPredIterTest)*1e3)])
+disp(['  RMS Test Error (mV): ' num2str(rms(dataTest.y - yPredIterTest)*1e3)])
 
 disp('  Simulation')
-disp(['  RMS Test Error: ' num2str(rms(dataTest.y - ySimIterTest)*1e3)])
+disp(['  RMS Test Error (mV): ' num2str(rms(dataTest.y - ySimIterTest)*1e3)])
