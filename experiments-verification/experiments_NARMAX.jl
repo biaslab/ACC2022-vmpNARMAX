@@ -15,19 +15,19 @@ function generate_data(ϕ; θ_scale=0.1, τ_true=1e3, degree=1, M1=1, M2=1, M3=1
     return input, output, ix_trn, ix_val
 end
 
-function model_specification(ϕ; M1=M1, M2=M2, M3=M3, M=M)
+function model_specification(ϕ; M1=M1, M2=M2, M3=M3, N=N)
 
     graph = FactorGraph()
 
     # Observed variables
-    @RV u_kmin1; placeholder(u_kmin1, :u_kmin1, dims=(M1,))
-    @RV y_kmin1; placeholder(y_kmin1, :y_kmin1, dims=(M2,))
-    @RV e_kmin1; placeholder(e_kmin1, :e_kmin1, dims=(M3,))
+    @RV u_kmin1; placeholder(u_kmin1, :u_kmin1, dims=(M1_m,))
+    @RV y_kmin1; placeholder(y_kmin1, :y_kmin1, dims=(M2_m,))
+    @RV e_kmin1; placeholder(e_kmin1, :e_kmin1, dims=(M3_m,))
     @RV u_k; placeholder(u_k, :u_k)
 
     # Time-invariant parameters
-    @RV θ ~ GaussianMeanPrecision(placeholder(:m_θ, dims=(M,)), placeholder(:w_θ, dims=(M,M)))
     @RV τ ~ Gamma(placeholder(:a_τ), placeholder(:b_τ))
+    @RV θ ~ GaussianMeanPrecision(placeholder(:m_θ, dims=(N,)), placeholder(:w_θ, dims=(N,N)))
 
     # Likelihood
     @RV y_k ~ NAutoRegressiveMovingAverageX(θ, u_k, u_kmin1, y_kmin1, e_kmin1, τ, ϕ=ϕ)
