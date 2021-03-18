@@ -1,4 +1,34 @@
 function [model e] = fEstPolNarmax(data,options)
+% 
+% Estimates coefficients for a polynomial NARMAX model
+% INPUT
+% data.u: input signal
+% data.y: output signal
+% options.na: number of delays for outputs
+% options.nb: number of delays for inputs
+% options.ne: number of delays for errors
+% options.nd: maximal polynomial degree
+%
+% OPTIONAL
+% options.ntran: length of transient
+% options.crossTerms: boolean for mixed polynomial orders excluding noise terms
+% options.noiseCrossTerms: boolean for mixed polynomial orders of noise terms
+% options.dc: boolean for including DC component (constant term)
+%
+% OUTPUT
+% model.comb: chosen combinations of polynomial orders
+% model.theta: estimated coefficients
+% 
+% copyright:
+% Maarten Schoukens
+% Vrije Universiteit Brussel, Brussels Belgium
+% 18/03/2021
+%
+% This work is licensed under a 
+% Creative Commons Attribution-NonCommercial 4.0 International License
+% (CC BY-NC 4.0)
+% https://creativecommons.org/licenses/by-nc/4.0/
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 u = data.u;
 y = data.y;

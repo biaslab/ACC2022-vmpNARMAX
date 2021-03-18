@@ -1,4 +1,27 @@
 function ySim = fSimPolNarmax(data,model)
+    % 
+% Estimates coefficients for a polynomial NARMAX model
+% INPUT
+% data.u: input signal
+% model.na: number of delays for outputs
+% model.nb: number of delays for inputs
+% model.ne: number of delays for errors   
+% model.nd: maximal polynomial degree
+% model.comb: array with combinations of polynomial orders
+%
+% OUTPUT
+% ySim: simulated outputs
+% 
+% copyright:
+% Maarten Schoukens
+% Vrije Universiteit Brussel, Brussels Belgium
+% 18/03/2021
+%
+% This work is licensed under a 
+% Creative Commons Attribution-NonCommercial 4.0 International License
+% (CC BY-NC 4.0)
+% https://creativecommons.org/licenses/by-nc/4.0/
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % if no e sequence provided, e = 0;
 try e = data.e; catch; e = zeros(size(data.u)); end
