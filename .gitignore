@@ -47,3 +47,6 @@ archive/
 *.fig
 *.png
 *.gif
+
+# Ignore reactiveMP implementation for now
+reactive/
