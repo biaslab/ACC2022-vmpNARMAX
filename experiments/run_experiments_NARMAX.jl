@@ -13,7 +13,7 @@ include("util.jl")
 """Experimental parameters"""
 
 # System noise std deviation
-stde = 0.02
+stde = 0.03
 
 # Series of train sizes
 trn_sizes = 2 .^collect(7:11)

@@ -20,9 +20,9 @@ function model_specification(ϕ; M1=M1, M2=M2, M3=M3, N=N)
     graph = FactorGraph()
 
     # Observed variables
-    @RV u_kmin1; placeholder(u_kmin1, :u_kmin1, dims=(M1_m,))
-    @RV y_kmin1; placeholder(y_kmin1, :y_kmin1, dims=(M2_m,))
-    @RV e_kmin1; placeholder(e_kmin1, :e_kmin1, dims=(M3_m,))
+    @RV u_kmin1; placeholder(u_kmin1, :u_kmin1, dims=(M1,))
+    @RV y_kmin1; placeholder(y_kmin1, :y_kmin1, dims=(M2,))
+    @RV e_kmin1; placeholder(e_kmin1, :e_kmin1, dims=(M3,))
     @RV u_k; placeholder(u_k, :u_k)
 
     # Time-invariant parameters
@@ -263,6 +263,67 @@ function experiment_RLS(input_trn, output_trn, input_tst, output_tst, ϕ; M1=1, 
         # Posterior predictive
         ϕx = ϕ([input_tst[k]; u_kmin1; y_kmin1; e_kmin1])
         simulations[k] = w_k'*ϕx
+        
+    end
+
+    "Evaluation"
+
+    # Compute root mean square error
+    RMS_prd = sqrt(mean((predictions[maxM+1:end] - output_tst[maxM+1:end]).^2))
+    RMS_sim = sqrt(mean((simulations[maxM+1:end] - output_tst[maxM+1:end]).^2))
+
+    return RMS_sim, RMS_prd
+end
+
+function experiment_SYS(input_tst, output_tst, ϕ, θ; M1=1, M2=1, M3=1, N=1)
+    
+    # Maximum delay
+    maxM = maximum([M1,M2,M3])
+
+    # Zero-padding of signals
+    input_tst = [zeros(maxM,); input_tst]
+    output_tst = [zeros(maxM,); output_tst]
+
+    # Length of validation signal
+    T_tst = length(input_tst)
+
+    "1-step ahead prediction"
+    
+    # Prepare array
+    predictions = zeros(T_tst,)
+    errors = zeros(T_tst,)
+
+    for k in maxM+1:T_tst
+        
+        # Update history vectors
+        u_kmin1 = input_tst[k-1:-1:k-M1]
+        y_kmin1 = output_tst[k-1:-1:k-M2]
+        e_kmin1 = errors[k-1:-1:k-M3]
+            
+        # Posterior predictive
+        ϕx = ϕ([input_tst[k]; u_kmin1; y_kmin1; e_kmin1])
+        predictions[k] = θ'*ϕx
+
+        # Update error
+        errors[k] = output_tst[k] - predictions[k]
+        
+    end
+
+    "Simulation"
+
+    # Prepare array
+    simulations = zeros(T_tst,)
+
+    for k in maxM+1:T_tst
+        
+        # Update history vectors
+        u_kmin1 = input_tst[k-1:-1:k-M1]
+        y_kmin1 = simulations[k-1:-1:k-M2]
+        e_kmin1 = zeros(M3,)
+            
+        # Posterior predictive
+        ϕx = ϕ([input_tst[k]; u_kmin1; y_kmin1; e_kmin1])
+        simulations[k] = θ'*ϕx
         
     end
 

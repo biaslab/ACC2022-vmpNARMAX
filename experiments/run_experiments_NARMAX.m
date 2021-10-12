@@ -8,7 +8,7 @@ addpath(genpath("gen-data"));
 %%
 
 % Series of train sizes
-trn_sizes = 2.^[6:14];
+trn_sizes = 2.^[7:11];
 num_trnsizes = length(trn_sizes);
 
 % Define transient and test indices
@@ -32,15 +32,15 @@ options.fs = 1000;
 options.type = 'odd';
 
 options.stdu = 1.0;
-options.stde = .02;
+options.stde = .06;
 
 options.dc = false;
 options.crossTerms = true;
-options.noiseCrossTerms = true;
+options.noiseCrossTerms = false;
 options.normalize = false;
 
 % Number of repetitions
-num_repeats = 100;
+num_repeats = 200;
 
 % Preallocate result arrays
 results_prd = zeros(num_repeats, num_trnsizes);
@@ -58,7 +58,7 @@ while r <= num_repeats
     if (max(abs(yTrain)) < 100) && (sum(isnan(yTrain))==0)
     
         % Write signal to file
-        save("data/NARMAXsignal_order"+num2str(M_m)+"_N"+num2str(N_m)+"_r" + string(r) + ".mat", "yTrain", "yTest", "uTrain", "uTest", "system", "options")
+        save("data/NARMAXsignal_stde"+num2str(options.stde)+"_pol"+num2str(options.nd)+"_order"+num2str(M_m)+"_N"+num2str(N_m)+"_r" + string(r) + ".mat", "yTrain", "yTest", "uTrain", "uTest", "system", "options")
         
         % Preallocate result arrays
         RMS_prd = zeros(1,num_trnsizes);
@@ -91,7 +91,7 @@ while r <= num_repeats
         end
         
         % Write results to file
-        save("results/results-NARMAX_ILS_M"+num2str(M_m)+"_N"+num2str(N_m)+"_degree3_r"+num2str(r)+".mat", "RMS_prd", "RMS_sim")
+        save("results/results-NARMAX_ILS_stde"+num2str(options.stde)+"_pol"+num2str(options.nd)+"_M"+num2str(M_m)+"_N"+num2str(N_m)+"_degree3_r"+num2str(r)+".mat", "RMS_prd", "RMS_sim")
         
         results_prd(r,:) = RMS_prd;
         results_sim(r,:) = RMS_sim;
@@ -102,13 +102,8 @@ while r <= num_repeats
 end
 close(dbox) 
 
-% Write results to file
-save("results/results-NARMAX_ILS_M"+num2str(M_m)+"_N"+num2str(N_m)+"_degree3.mat", "results_prd", "results_sim")
-
 results_prd(results_prd == Inf) = NaN;
 results_sim(results_sim == Inf) = NaN;
-results_prd(results_prd > 10) = NaN;
-results_sim(results_sim > 10) = NaN;
 
 disp("RMS");
 [nanmean(results_prd,1); nanmean(results_sim,1)]

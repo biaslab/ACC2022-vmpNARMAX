@@ -48,5 +48,8 @@ archive/
 *.png
 *.gif
 
-# Ignore reactiveMP implementation for now
+# Ignore folders
 reactive/
+legacy-experiments/
+
+
