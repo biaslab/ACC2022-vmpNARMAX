@@ -49,7 +49,7 @@ archive/
 *.gif
 
 # Ignore folders
-reactive/
+#reactive/
 legacy-experiments/
 
 
