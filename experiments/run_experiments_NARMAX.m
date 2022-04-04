@@ -1,14 +1,13 @@
 close all;
 clear all;
-clc;
 
-addpath(genpath("../offline-baseline"));
-addpath(genpath("gen-data"));
+addpath(genpath("../algorithms/ILS-estimator-NARMAX"));
+addpath(genpath("../datasets"));
 
 %%
 
 % Series of train sizes
-trn_sizes = 2.^[7:11];
+trn_sizes = 2.^[7:10];
 num_trnsizes = length(trn_sizes);
 
 % Define transient and test indices
@@ -58,7 +57,7 @@ while r <= num_repeats
     if (max(abs(yTrain)) < 100) && (sum(isnan(yTrain))==0)
     
         % Write signal to file
-        save("data/NARMAXsignal_stde"+num2str(options.stde)+"_pol"+num2str(options.nd)+"_order"+num2str(M_m)+"_N"+num2str(N_m)+"_r" + string(r) + ".mat", "yTrain", "yTest", "uTrain", "uTest", "system", "options")
+        save("../datasets/data/NARMAXsignal_stde"+num2str(options.stde)+"_pol"+num2str(options.nd)+"_order"+num2str(M_m)+"_N"+num2str(N_m)+"_r" + string(r) + ".mat", "yTrain", "yTest", "uTrain", "uTest", "system", "options")
         
         % Preallocate result arrays
         RMS_prd = zeros(1,num_trnsizes);

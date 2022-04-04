@@ -4,17 +4,6 @@ import ForneyLab: unsafeMean, unsafeCov, unsafePrecision
 using NARMAX
 
 
-function generate_data(ϕ; θ_scale=0.1, τ_true=1e3, degree=1, M1=1, M2=1, M3=1, fMin=0.8, fMax=1.0, fs=1.0, uStd=1., T=100, split_index=50, start_index=10, num_periods=num_periods, points_period=points_period)
-
-    # Generate signal
-    input, output = gensignalNARMAX(ϕ, θ_scale, τ_true; M1=M1, M2=M2, M3=M3, degree=degree, fMin=fMin, fMax=fMax, fs=fs, uStd=uStd, T=T, num_periods=num_periods, points_period=points_period)
-
-    # Split data
-    ix_trn, ix_val = split_data(T, split_index, start_index=start_index)
-
-    return input, output, ix_trn, ix_val
-end
-
 function model_specification(ϕ; M1=M1, M2=M2, M3=M3, N=N)
 
     graph = FactorGraph()
@@ -39,7 +28,7 @@ function model_specification(ϕ; M1=M1, M2=M2, M3=M3, N=N)
     
 end
 
-function experiment_FEM(input_trn, output_trn, input_tst, output_tst, ϕ, priors; M1=1, M2=1, M3=1, N=3, num_iters=5, computeFE=false)
+function VMP(input_trn, output_trn, input_tst, output_tst, ϕ, priors; M1=1, M2=1, M3=1, N=3, num_iters=5, computeFE=false)
 
     # Maximum delay
     maxM = maximum([M1,M2,M3])
@@ -84,7 +73,7 @@ function experiment_FEM(input_trn, output_trn, input_tst, output_tst, ϕ, priors
         
         ϕx = ϕ([input_trn[k]; u_kmin1; y_kmin1; e_kmin1])
         predictions[1][k] = θ_k[1]'*ϕx
-        # predictions[2][k] = ϕx'*inv(θ_k[2])*ϕx + inv(τ_k[1]/τ_k[2])
+        predictions[2][k] = ϕx'*inv(θ_k[2])*ϕx + inv(τ_k[1]/τ_k[2])
 
         # Compute prediction error
         errors[k] = output_trn[k] - predictions[1][k]
@@ -142,7 +131,7 @@ function experiment_FEM(input_trn, output_trn, input_tst, output_tst, ϕ, priors
         # Posterior predictive
         ϕx = ϕ([input_tst[k]; u_kmin1; y_kmin1; e_kmin1])
         predictions[1][k] = θ_k[1]'*ϕx
-        # predictions[2][k] = ϕx'*inv(θ_k[2])*ϕx + inv(τ_k[1] / τ_k[2])
+        predictions[2][k] = ϕx'*inv(θ_k[2])*ϕx + inv(τ_k[1] / τ_k[2])
 
         # Update error
         errors[k] = output_tst[k] - predictions[1][k]
@@ -164,7 +153,7 @@ function experiment_FEM(input_trn, output_trn, input_tst, output_tst, ϕ, priors
         # Posterior predictive
         ϕx = ϕ([input_tst[k]; u_kmin1; y_kmin1; e_kmin1])
         simulations[1][k] = θ_k[1]'*ϕx
-        # simulations[2][k] = ϕx'*inv(θ_k[2])*ϕx + inv(τ_k[1] / τ_k[2])
+        simulations[2][k] = ϕx'*inv(θ_k[2])*ϕx + inv(τ_k[1] / τ_k[2])
         
     end
 
@@ -181,101 +170,7 @@ function experiment_FEM(input_trn, output_trn, input_tst, output_tst, ϕ, priors
     end
 end
 
-function experiment_RLS(input_trn, output_trn, input_tst, output_tst, ϕ; M1=1, M2=1, M3=1, N=1, λ=1.00)
-    
-    # Maximum delay
-    maxM = maximum([M1,M2,M3])
-
-    # Zero-padding of signals
-    input_trn = [zeros(maxM,); input_trn]
-    input_tst = [zeros(maxM,); input_tst]
-    output_trn = [zeros(maxM,); output_trn]
-    output_tst = [zeros(maxM,); output_tst]
-
-    # Signal splits
-    T_trn = length(input_trn)
-    T_tst = length(input_tst)
-
-    # Parameters
-    P = λ.*Matrix{Float64}(I,N,N)
-    w_k = zeros(N,)
-
-    # Preallocate prediction array
-    predictions = zeros(T_trn,)
-    errors = zeros(T_trn,)
-
-    for (ii,k) in enumerate(maxM+1:T_trn)
-
-        # Update history vectors
-        u_kmin1 = input_trn[k-1:-1:k-M1]
-        y_kmin1 = output_trn[k-1:-1:k-M2]
-        e_kmin1 = errors[k-1:-1:k-M3]
-        
-        # Update data vector
-        ϕx = ϕ([input_trn[k]; u_kmin1; y_kmin1; e_kmin1])
-        
-        # Update weights
-        α = output_trn[k] - w_k'*ϕx 
-        g = P*ϕx*inv(λ + ϕx'*P*ϕx)
-        P = inv(λ)*P - g*ϕx'*inv(λ)*P
-        w_k = w_k + α*g
-        
-        # Prediction
-        predictions[k] = w_k'*ϕx
-        errors[k] = output_trn[k] - predictions[k]
-        
-    end
-
-    "1-step ahead prediction"
-    
-    # Prepare array
-    predictions = zeros(T_tst,)
-    errors = zeros(T_tst,)
-
-    for k in maxM+1:T_tst
-        
-        # Update history vectors
-        u_kmin1 = input_tst[k-1:-1:k-M1]
-        y_kmin1 = output_tst[k-1:-1:k-M2]
-        e_kmin1 = errors[k-1:-1:k-M3]
-            
-        # Posterior predictive
-        ϕx = ϕ([input_tst[k]; u_kmin1; y_kmin1; e_kmin1])
-        predictions[k] = w_k'*ϕx
-
-        # Update error
-        errors[k] = output_tst[k] - predictions[k]
-        
-    end
-
-    "Simulation"
-
-    # Prepare array
-    simulations = zeros(T_tst,)
-
-    for k in maxM+1:T_tst
-        
-        # Update history vectors
-        u_kmin1 = input_tst[k-1:-1:k-M1]
-        y_kmin1 = simulations[k-1:-1:k-M2]
-        e_kmin1 = zeros(M3,)
-            
-        # Posterior predictive
-        ϕx = ϕ([input_tst[k]; u_kmin1; y_kmin1; e_kmin1])
-        simulations[k] = w_k'*ϕx
-        
-    end
-
-    "Evaluation"
-
-    # Compute root mean square error
-    RMS_prd = sqrt(mean((predictions[maxM+1:end] - output_tst[maxM+1:end]).^2))
-    RMS_sim = sqrt(mean((simulations[maxM+1:end] - output_tst[maxM+1:end]).^2))
-
-    return RMS_sim, RMS_prd
-end
-
-function experiment_SYS(input_tst, output_tst, ϕ, θ; M1=1, M2=1, M3=1, N=1)
+function run_system(input_tst, output_tst, ϕ, θ; M1=1, M2=1, M3=1, N=1)
     
     # Maximum delay
     maxM = maximum([M1,M2,M3])

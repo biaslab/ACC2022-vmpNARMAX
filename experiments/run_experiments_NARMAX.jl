@@ -6,7 +6,8 @@ using LinearAlgebra
 using ForneyLab
 using NARMAX
 
-include("experiments_NARMAX.jl")
+include("../algorithms/VMP-estimator-NARMAX.jl")
+include("../algorithms/RLS-estimator-NARMAX.jl")
 include("util.jl")
 
 
@@ -16,7 +17,7 @@ include("util.jl")
 stde = 0.03
 
 # Series of train sizes
-trn_sizes = 2 .^collect(7:11)
+trn_sizes = 2 .^collect(7:10)
 num_trnsizes = length(trn_sizes)
 
 # Define transient and test indices
@@ -24,10 +25,10 @@ transient = 0
 ix_tst = collect(1:1000) .+ transient
 
 # Number of VMP iterations
-num_iters = 5
+num_iters = 10
 
 # Number of repetitions
-num_repeats = 200
+num_repeats = 100
 
 """Model parameters"""
 
@@ -64,12 +65,12 @@ prior_mτ = priors["τ"][1] ./ priors["τ"][2]
 """Run experiments"""
 
 # Preallocate results arrays
-results_sim_FEM = zeros(num_repeats, num_trnsizes)
-results_prd_FEM = zeros(num_repeats, num_trnsizes)
+results_sim_VMP = zeros(num_repeats, num_trnsizes)
+results_prd_VMP = zeros(num_repeats, num_trnsizes)
 results_sim_RLS = zeros(num_repeats, num_trnsizes)
 results_prd_RLS = zeros(num_repeats, num_trnsizes)
-# results_sim_SYS = zeros(num_repeats, num_trnsizes)
-# results_prd_SYS = zeros(num_repeats, num_trnsizes)
+results_sim_SYS = zeros(num_repeats, num_trnsizes)
+results_prd_SYS = zeros(num_repeats, num_trnsizes)
 
 # Specify model and compile update functions
 source_code = model_specification(ϕ, M1=M1, M2=M2, M3=M3, N=N)
@@ -78,12 +79,12 @@ eval(Meta.parse(source_code))
 println("Starting experiments..")
 @showprogress for r = 1:num_repeats
 
-    RMS_sim_FEM = zeros(num_trnsizes,)
-    RMS_prd_FEM = zeros(num_trnsizes,)
+    RMS_sim_VMP = zeros(num_trnsizes,)
+    RMS_prd_VMP = zeros(num_trnsizes,)
     RMS_sim_RLS = zeros(num_trnsizes,)
     RMS_prd_RLS = zeros(num_trnsizes,)
-    # RMS_sim_SYS = zeros(num_trnsizes,)
-    # RMS_prd_SYS = zeros(num_trnsizes,)
+    RMS_sim_SYS = zeros(num_trnsizes,)
+    RMS_prd_SYS = zeros(num_trnsizes,)
     
     # Read matlab-generated signal
     mat_data = matread("data/NARMAXsignal_stde"*string(stde)*"_pol3_order"*string(M)*"_N"*string(N)*"_r"*string(r)*".mat")
@@ -102,29 +103,29 @@ println("Starting experiments..")
         τ_sys = inv(mat_data["options"]["stde"]^2)
 
         # Experiments        
-        RMS_sim_FEM[n], RMS_prd_FEM[n] = experiment_FEM(input_trn, output_trn, input_tst, output_tst, ϕ, priors, M1=M1, M2=M2, M3=M3, N=N, num_iters=num_iters, computeFE=false)
-        RMS_sim_RLS[n], RMS_prd_RLS[n] = experiment_RLS(input_trn, output_trn, input_tst, output_tst, ϕ, M1=M1, M2=M2, M3=M3, N=N, λ=λ)
-        # RMS_sim_SYS[n], RMS_prd_SYS[n] = experiment_SYS(input_tst, output_tst, ϕ, θ_sys, M1=M1, M2=M2, M3=M3, N=N)
+        RMS_sim_VMP[n], RMS_prd_VMP[n] = VMP(input_trn, output_trn, input_tst, output_tst, ϕ, priors, M1=M1, M2=M2, M3=M3, N=N, num_iters=num_iters, computeFE=false)
+        RMS_sim_RLS[n], RMS_prd_RLS[n] = RLS(input_trn, output_trn, input_tst, output_tst, ϕ, M1=M1, M2=M2, M3=M3, N=N, λ=λ)
+        RMS_sim_SYS[n], RMS_prd_SYS[n] = run_system(input_tst, output_tst, ϕ, θ_sys, M1=M1, M2=M2, M3=M3, N=N)
     end
 
     # Write results to file
-    save("results/results-NARMAX_FEM_stde"*string(stde)*"_pol3_M"*string(M)*"_N"*string(N)*"_degree"*string(degree)*"_mtau_"*string(prior_mτ)*"_r"*string(r)*".jld", "RMS_sim", RMS_sim_FEM, "RMS_prd", RMS_prd_FEM)
+    save("results/results-NARMAX_VMP_stde"*string(stde)*"_pol3_M"*string(M)*"_N"*string(N)*"_degree"*string(degree)*"_mtau_"*string(prior_mτ)*"_r"*string(r)*".jld", "RMS_sim", RMS_sim_VMP, "RMS_prd", RMS_prd_VMP)
     save("results/results-NARMAX_RLS_stde"*string(stde)*"_pol3_M"*string(M)*"_N"*string(N)*"_degree"*string(degree)*"_r"*string(r)*".jld", "RMS_sim", RMS_sim_RLS, "RMS_prd", RMS_prd_RLS)
-    # save("results/results-NARMAX_SYS_stde"*string(stde)*"_pol3_M"*string(M)*"_N"*string(N)*"_degree"*string(degree)*"_r"*string(r)*".jld", "RMS_sim", RMS_sim_SYS, "RMS_prd", RMS_prd_SYS)
+    save("results/results-NARMAX_SYS_stde"*string(stde)*"_pol3_M"*string(M)*"_N"*string(N)*"_degree"*string(degree)*"_r"*string(r)*".jld", "RMS_sim", RMS_sim_SYS, "RMS_prd", RMS_prd_SYS)
 
-    results_prd_FEM[r,:] = RMS_prd_FEM
-    results_sim_FEM[r,:] = RMS_sim_FEM
+    results_prd_VMP[r,:] = RMS_prd_VMP
+    results_sim_VMP[r,:] = RMS_sim_VMP
     results_prd_RLS[r,:] = RMS_prd_RLS
     results_sim_RLS[r,:] = RMS_sim_RLS
-    # results_prd_SYS[r,:] = RMS_prd_SYS
-    # results_sim_SYS[r,:] = RMS_sim_SYS
+    results_prd_SYS[r,:] = RMS_prd_SYS
+    results_sim_SYS[r,:] = RMS_sim_SYS
 
 end
 
 # Write results to file
 println("Writing results to file..")
-save("results/results-NARMAX_FEM_stde"*string(stde)*"_pol3_M"*string(M)*"_N"*string(N)*"_degree"*string(degree)*".jld", "RMS_sim", results_sim_FEM, "RMS_prd", results_prd_FEM)
+save("results/results-NARMAX_VMP_stde"*string(stde)*"_pol3_M"*string(M)*"_N"*string(N)*"_degree"*string(degree)*".jld", "RMS_sim", results_sim_VMP, "RMS_prd", results_prd_VMP)
 save("results/results-NARMAX_RLS_stde"*string(stde)*"_pol3_M"*string(M)*"_N"*string(N)*"_degree"*string(degree)*".jld", "RMS_sim", results_sim_RLS, "RMS_prd", results_prd_RLS)
-# save("results/results-NARMAX_SYS_stde"*string(stde)*"_pol3_M"*string(M)*"_N"*string(N)*"_degree"*string(degree)*".jld", "RMS_sim", results_sim_RLS, "RMS_prd", results_prd_RLS)
+save("results/results-NARMAX_SYS_stde"*string(stde)*"_pol3_M"*string(M)*"_N"*string(N)*"_degree"*string(degree)*".jld", "RMS_sim", results_sim_RLS, "RMS_prd", results_prd_RLS)
 
 println("Experiments complete.")

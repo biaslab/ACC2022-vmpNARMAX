@@ -1,6 +1,6 @@
 using Random
 
-include("input/fMultiSinGen.jl")
+include("fMultiSinGen.jl")
 
 
 function gensignalARX(θ_true, τ_true; M1=2, M2=2, fMin=0.8, fMax=1.0, fs=1.0, T=100)

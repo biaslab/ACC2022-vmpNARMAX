@@ -2,18 +2,18 @@
 
 close all
 clear all
-clc
 
-addpath(genpath("baselines"))
+addpath(genpath("../algorithms/ILS-estimator-NARMAX"))
+addpath(genpath("../datasets"))
 
 %% set variables
 transient = 1:10;
 iTrain = 1:1000 + transient(end);
 iTest = 1:1000 + iTrain(end);
 
-na = 3; % # output delays
-nb = 3; % # input delays
-ne = 3; % # innovation delays
+na = 1; % # output delays
+nb = 1; % # input delays
+ne = 1; % # innovation delays
 nd = 3; % # degree polynomial nonlinearity
 
 N = 2^16;
