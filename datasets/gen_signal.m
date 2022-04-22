@@ -34,7 +34,7 @@ sysTheta(end-nd+2:end) = 0.1*(rand(nd-1,1)-0.5); % nl terms noise
 
 ToySystem.nb = nb;
 ToySystem.na = na;
-ToySystem.ne = na;
+ToySystem.ne = ne;
 ToySystem.nd = nd;
 ToySystem.stde = stde;
 ToySystem.comb = sysComb;
