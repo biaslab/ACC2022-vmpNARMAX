@@ -3,8 +3,8 @@
 close all
 clear all
 
-addpath(genpath("../algorithms/ILS-estimator-NARMAX"))
-addpath(genpath("../datasets"))
+addpath(genpath("algorithms/ILS-estimator-NARMAX"))
+addpath(genpath("datasets"))
 
 %% set variables
 transient = 1:10;
