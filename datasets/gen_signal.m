@@ -25,8 +25,8 @@ nComb = size(sysComb,2);
 [b,a] = butter(nb,0.1);% set linear components equal to butterworth filter
 
 sysTheta = zeros(nComb,1);
-sysTheta(2:nd:nd*(nb+1+na)) = 0.01*(rand(nb+1+na,1)-0.5); % even terms
-sysTheta(3:nd:nd*(nb+1+na)) = 0.01*(rand(nb+1+na,1)-0.5); % odd terms
+sysTheta(2:nd:nd*(nb+1+na)) = 0.01*(rand(length(2:nd:nd*(nb+1+na)),1)-0.5); % even terms
+sysTheta(3:nd:nd*(nb+1+na)) = 0.01*(rand(length(3:nd:nd*(nb+1+na)),1)-0.5); % odd terms
 sysTheta(1:nd:(nb+1)*nd) = b;
 sysTheta((nb+1)*nd+1:nd:(nb+1)*nd+na*nd) = -a(2:end);
 sysTheta((nb+1+na)*nd+1:nd:(nb+1+na)*nd+ne*nd) = 0.1;
